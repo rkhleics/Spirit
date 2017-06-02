@@ -11,6 +11,9 @@ User = get_user_model()
 
 
 def update_or_create_user_profile(sender, instance, created, **kwargs):
+    if kwargs.get('raw'):
+        return
+
     user = instance
 
     if created:
