@@ -10,6 +10,7 @@ from .registry import register
 FACEBOOK_URL = "http://www.facebook.com/sharer.php?%s"
 TWITTER_URL = "https://twitter.com/share?%s"
 GPLUS_URL = "https://plus.google.com/share?%s"
+LINKEDIN_URL = "https://www.linkedin.com/shareArticle?%s"
 
 
 def _compose_tweet(title):
@@ -56,6 +57,17 @@ def get_email_share_url(context, url, title):
               ('subject', title),
               ('to', "")]
     return "mailto:?%s" % urlencode(params)
+
+
+@register.simple_tag(takes_context=True)
+def get_linkedin_share_url(context, url, title, mini=True):
+    request = context['request']
+    url = request.build_absolute_uri(url)
+    params = [('url', url),
+              ('tite', title)]
+    if mini:
+        params.append(('mini', 'true'))
+    return LINKEDIN_URL % urlencode(params)
 
 
 @register.simple_tag(takes_context=True)
