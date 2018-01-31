@@ -44,6 +44,9 @@ class Category(models.Model):
         verbose_name = _("category")
         verbose_name_plural = _("categories")
 
+    def __str__(self):
+        return self.title
+
     def get_absolute_url(self):
         if self.pk == settings.ST_TOPIC_PRIVATE_CATEGORY_PK:
             return reverse('spirit:topic:private:index')
