@@ -19,6 +19,10 @@ from .forms import CommentForm, CommentMoveForm, CommentImageForm, CommentFileFo
 from .utils import comment_posted, post_comment_update, pre_comment_update
 
 
+def get_next_url(request, default=None):
+    return request.POST.get('next') or request.GET.get('next') or default
+
+
 @login_required
 @ratelimit(rate='1/10s')
 def publish(request, topic_id, pk=None):
@@ -34,13 +38,13 @@ def publish(request, topic_id, pk=None):
             if not user.st.update_post_hash(form.get_comment_hash()):
                 # Hashed comment may have not been saved yet
                 return redirect(
-                    request.POST.get('next', None) or
+                    get_next_url(request) or
                     Comment.get_last_for_topic(topic_id)
                            .get_absolute_url())
 
             comment = form.save()
             comment_posted(comment=comment, mentions=form.mentions)
-            return redirect(request.POST.get('next', comment.get_absolute_url()))
+            return redirect(get_next_url(request, comment.get_absolute_url()))
     else:
         initial = None
 
@@ -70,7 +74,7 @@ def update(request, pk):
             pre_comment_update(comment=Comment.objects.get(pk=comment.pk))
             comment = form.save()
             post_comment_update(comment=comment)
-            return redirect(request.POST.get('next', comment.get_absolute_url()))
+            return redirect(get_next_url(request, comment.get_absolute_url()))
     else:
         form = CommentForm(instance=comment)
 
@@ -90,7 +94,7 @@ def delete(request, pk, remove=True):
             .filter(pk=pk)\
             .update(is_removed=remove)
 
-        return redirect(request.GET.get('next', comment.get_absolute_url()))
+        return redirect(get_next_url(request, comment.get_absolute_url()))
 
     context = {'comment': comment, }
 
@@ -112,7 +116,7 @@ def move(request, topic_id):
     else:
         messages.error(request, render_form_errors(form))
 
-    return redirect(request.POST.get('next', topic.get_absolute_url()))
+    return redirect(get_next_url(request, topic.get_absolute_url()))
 
 
 def find(request, pk):
