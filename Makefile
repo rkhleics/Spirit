@@ -13,4 +13,17 @@ sdist: test clean
 release: test clean
 	python setup.py sdist upload
 
-.PHONY: clean test sdist release docs
+txpush:
+	python manage.py spiritmakemessages --locale en && \
+	python manage.py spirittxpush
+
+txpull:
+	python manage.py spirittxpull && \
+	python manage.py spiritcompilemessages
+
+tx: txpush txpull
+
+start:
+	python manage.py runserver
+
+.PHONY: clean test sdist release docs txpush txpull tx start

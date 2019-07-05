@@ -1,7 +1,7 @@
 # Spirit
 
-[![Build Status](https://img.shields.io/travis/nitely/Spirit.svg?style=flat-square)](https://travis-ci.org/nitely/Spirit)
-[![Coverage Status](https://img.shields.io/coveralls/nitely/Spirit.svg?style=flat-square)](https://coveralls.io/r/nitely/Spirit)
+[![Build Status](https://img.shields.io/travis/nitely/Spirit/master.svg?style=flat-square)](https://travis-ci.org/nitely/Spirit)
+[![Coverage Status](https://img.shields.io/coveralls/nitely/Spirit/master.svg?style=flat-square)](https://coveralls.io/r/nitely/Spirit)
 [![pypi](https://img.shields.io/pypi/v/django-spirit.svg?style=flat-square)](https://pypi.python.org/pypi/django-spirit)
 [![licence](https://img.shields.io/pypi/l/django-spirit.svg?style=flat-square)](https://raw.githubusercontent.com/nitely/Spirit/master/LICENSE)
 
@@ -11,8 +11,8 @@ To see it in action, please visit [The Spirit Project](http://spirit-project.com
 
 ## Compatibility
 
-* Python 2.7, 3.4, 3.5, 3.6 (recommended) and 3.7
-* Django 1.11 LTS (recommended), 2.0, 2.1
+* Python 2.7, 3.5, 3.6 and 3.7 (recommended)
+* Django 1.11 LTS, 2.1, 2.2 LTS (recommended)
 * PostgreSQL (recommended), MySQL, Oracle Database and SQLite
 
 Constrained by "[What Python version can I use with Django?](https://docs.djangoproject.com/en/2.1/faq/install/#what-python-version-can-i-use-with-django)"

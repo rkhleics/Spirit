@@ -11,6 +11,8 @@ import os
 #: The category's PK containing all of the private topics.
 #: The category is auto-created and so this value should not change
 ST_TOPIC_PRIVATE_CATEGORY_PK = 1
+#: Enable/disable category ordering.
+ST_ORDERED_CATEGORIES = False
 
 #: Enable/disable the rate-limit for all forms
 ST_RATELIMIT_ENABLE = True
@@ -36,6 +38,11 @@ ST_MENTIONS_PER_COMMENT = 30
 #: Minutes to wait before a given user
 #: will be able to post a duplicated comment/topic
 ST_DOUBLE_POST_THRESHOLD_MINUTES = 30
+#: Enable MathJax. Spirit's markdown supports
+#: math notation with ``$$...$$``, ``\(...\)``, ``\[...\]``
+#: and ``\begin{abc}...\end{abc}``, this merely insert the
+#: MathJax script into the HTML.
+ST_MATH_JAX = False
 
 #: Number of next/previous pages the paginator will show
 ST_YT_PAGINATOR_PAGE_RANGE = 3
@@ -93,6 +100,35 @@ ST_UNICODE_SLUGS = True
 ST_UNIQUE_EMAILS = True
 #: Make emails case insensitive
 ST_CASE_INSENSITIVE_EMAILS = True
+
+#: Make user-names case insensitive
+#:
+#: .. Note::
+#:     This can be set to ``False`` at any time,
+#:     however setting it back to ``True`` requires
+#:     taking care of clashing users,
+#:     i.e: ``someuser``, ``SomeUser`` and ``SoMeUsEr``,
+#:     only one of those users will be able log-in
+#:     (the one in lowercase). Removing clashing users
+#:     is usually not possible.
+ST_CASE_INSENSITIVE_USERNAMES = True
+
+#: Prevent duplication of files
+#: uploaded by a user. Including images.
+#: This is not across
+#: all users, but a single user.
+#:
+#: Be aware the de-duplication is based on
+#: a file hash calculation, which is
+#: quite slow and it will degrade the server's
+#: performance.
+#:
+#: All files will have the hash as name and
+#: the original file's name will be lost.
+#:
+#: .. Note::
+#:     Defaults to ``False`` since Spirit 0.8
+ST_PREVENT_SOME_FILE_DUPLICATION = False
 
 # Tests helper
 ST_TESTS_RATELIMIT_NEVER_EXPIRE = False

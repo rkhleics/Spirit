@@ -9,6 +9,7 @@ from djconfig import config
 
 from ...core.conf import settings
 from ...core.utils import paginator
+from ...core.utils.db import create_or_none
 
 
 class CommentBookmark(models.Model):
@@ -53,16 +54,40 @@ class CommentBookmark(models.Model):
         return config.comments_per_page * (page_number - 1) + 1
 
     @classmethod
-    def update_or_create(cls, user, topic, comment_number):
+    def increase_to(cls, user, topic, comment_number):
+        """
+        Increment to comment_number if it's greater \
+        than the current one. Return ``True`` if \
+        bookmark was updated, return ``False`` otherwise
+        """
+        assert user.is_authenticated
+        return bool(
+            cls.objects
+            .filter(
+                user=user,
+                topic=topic,
+                comment_number__lt=comment_number)
+            .update(comment_number=comment_number))
+
+    @classmethod
+    def increase_or_create(cls, user, topic, comment_number):
+        """
+        Increment to comment_number if it's greater \
+        than the current one. Return ``True`` if \
+        bookmark was updated/created, return ``False`` \
+        otherwise. This operation is atomic
+        """
         if not user.is_authenticated:
-            return
-
+            return False
         if comment_number is None:
-            return
+            return False
 
-        bookmark, created = cls.objects.update_or_create(
+        kwargs = dict(
             user=user,
             topic=topic,
-            defaults={'comment_number': comment_number})
-
-        return bookmark
+            comment_number=comment_number)
+        # Due to `comment_number__lt` we can't do better than this,
+        # both queries run almost always
+        return (
+            bool(create_or_none(cls, **kwargs)) or
+            cls.increase_to(**kwargs))

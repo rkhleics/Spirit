@@ -1,3 +1,48 @@
+0.8.0 (dev)
+==================
+
+* Breaking changes:
+  * Removed Python 3.4 support
+  * Removed Django 2.0 support
+  * Added Django 2.2 support
+  * No longer avoid duplicated user files,
+    because of performance reasons.
+    Set `ST_PREVENT_SOME_FILE_DUPLICATION` to `True`
+    to get the previous behaviour back.
+
+0.7.1
+==================
+
+* Add math support (disabled by default, see doc's settings section)
+* Add sortable categories (disabed by default, see doc's settings section).
+  Thanks to @andreynovikov
+* Update `mistune` and `Pillow` dependencies
+* Remove `uni-slugify` and `Unidecode` dependencies
+* Python and Django warnings are enabled for new projects.
+  The change is in manage.py
+* Fix strike-through style
+
+0.7.0
+==================
+
+* Breakig change: usernames are now case-insensitive,
+  set `ST_CASE_INSENSITIVE_USERNAMES = False` to
+  disable this feature. Disabling it is likely
+  required for existing instances of Spirit due
+  to clashing usernames
+* New: case insensitive usernames
+
+0.6.3
+==================
+
+* Fix private forum restriction regression where
+  an anonymous user was able to view sections
+  other than the index
+* Make bookmark save latest place only,
+  going back to a previous page won't
+  update the bookmark anymore (PR #245)
+* Update locales/translations
+
 0.6.2
 ==================
 

@@ -49,6 +49,10 @@ class CommentViewTest(TestCase):
         self.category = utils.create_category()
         self.topic = utils.create_topic(category=self.category, user=self.user)
 
+    def tearDown(self):
+        media_test = os.path.join(settings.BASE_DIR, 'media_test')
+        shutil.rmtree(media_test, ignore_errors=True)
+
     @override_settings(ST_TESTS_RATELIMIT_NEVER_EXPIRE=True)
     def test_comment_publish(self):
         """
@@ -178,7 +182,7 @@ class CommentViewTest(TestCase):
                                     form_data)
         self.assertEqual(response.status_code, 404)
 
-    def test_comment_publish_on_closed_cateory(self):
+    def test_comment_publish_on_closed_category(self):
         """
         should be able to create a comment on a closed category (if topic is not closed)
         """
@@ -244,10 +248,13 @@ class CommentViewTest(TestCase):
         """
         utils.login(self)
         comment = utils.create_comment(topic=self.topic)
-        response = self.client.get(reverse('spirit:comment:publish', kwargs={'topic_id': self.topic.pk,
-                                                                             'pk': comment.pk}))
-        self.assertEqual(response.context['form'].initial['comment'],
-                         markdown.quotify(comment.comment, comment.user.username))
+        response = self.client.get(
+            reverse('spirit:comment:publish', kwargs={
+                'topic_id': self.topic.pk,
+                'pk': comment.pk}))
+        self.assertEqual(
+            response.context['form'].initial['comment'],
+            markdown.quotify(comment.comment, comment.user.username))
 
     def test_comment_publish_next(self):
         """
@@ -255,8 +262,9 @@ class CommentViewTest(TestCase):
         """
         utils.login(self)
         form_data = {'comment': 'foobar', 'next': '/fakepath/'}
-        response = self.client.post(reverse('spirit:comment:publish', kwargs={'topic_id': self.topic.pk, }),
-                                    form_data)
+        response = self.client.post(
+            reverse('spirit:comment:publish', kwargs={'topic_id': self.topic.pk, }),
+            form_data)
         self.assertRedirects(response, '/fakepath/', status_code=302, target_status_code=404)
 
     def test_comment_update(self):
@@ -275,8 +283,9 @@ class CommentViewTest(TestCase):
 
         # next
         form_data.update({'next': '/fakepath/', })
-        response = self.client.post(reverse('spirit:comment:update', kwargs={'pk': comment.pk, }),
-                                    form_data)
+        response = self.client.post(
+            reverse('spirit:comment:update', kwargs={'pk': comment.pk, }),
+            form_data)
         self.assertRedirects(response, '/fakepath/', status_code=302, target_status_code=404)
 
     def test_comment_update_not_moderator(self):
@@ -288,8 +297,9 @@ class CommentViewTest(TestCase):
 
         utils.login(self)
         form_data = {'comment': 'barfoo', }
-        response = self.client.post(reverse('spirit:comment:update', kwargs={'pk': comment.pk, }),
-                                    form_data)
+        response = self.client.post(
+            reverse('spirit:comment:update', kwargs={'pk': comment.pk, }),
+            form_data)
         self.assertEqual(response.status_code, 404)
 
     def test_comment_update_moderator(self):
@@ -302,8 +312,9 @@ class CommentViewTest(TestCase):
 
         utils.login(self)
         form_data = {'comment': 'barfoo', }
-        response = self.client.post(reverse('spirit:comment:update', kwargs={'pk': comment.pk, }),
-                                    form_data)
+        response = self.client.post(
+            reverse('spirit:comment:update', kwargs={'pk': comment.pk, }),
+            form_data)
         expected_url = reverse('spirit:comment:find', kwargs={'pk': comment.pk, })
         self.assertRedirects(response, expected_url, status_code=302, target_status_code=302)
         self.assertEqual(Comment.objects.get(pk=comment.pk).comment, 'barfoo')
@@ -330,8 +341,9 @@ class CommentViewTest(TestCase):
         utils.login(self)
         comment_posted = utils.create_comment(user=self.user, topic=self.topic)
         form_data = {'comment': 'my comment, oh!', }
-        self.client.post(reverse('spirit:comment:update', kwargs={'pk': comment_posted.pk, }),
-                         form_data)
+        self.client.post(
+            reverse('spirit:comment:update', kwargs={'pk': comment_posted.pk, }),
+            form_data)
         self.assertEqual(Comment.objects.get(pk=comment_posted.pk).modified_count, 1)
 
     def test_comment_update_history(self):
@@ -422,28 +434,184 @@ class CommentViewTest(TestCase):
         expected_url = comment.topic.get_absolute_url() + "#c1"
         self.assertRedirects(response, expected_url, status_code=302)
 
-    @override_settings(MEDIA_ROOT=os.path.join(settings.BASE_DIR, 'media_test'))
+    @override_settings(
+        MEDIA_ROOT=os.path.join(settings.BASE_DIR, 'media_test'),
+        ST_PREVENT_SOME_FILE_DUPLICATION=True)
     def test_comment_image_upload(self):
         """
         comment image upload
         """
         utils.login(self)
-        img = BytesIO(b'GIF87a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00ccc,\x00'
-                      b'\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;')
-        files = {'image': SimpleUploadedFile('image.gif', img.read(), content_type='image/gif'), }
-        response = self.client.post(reverse('spirit:comment:image-upload-ajax'),
-                                    HTTP_X_REQUESTED_WITH='XMLHttpRequest',
-                                    data=files)
+        img = BytesIO(
+            b'GIF87a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00ccc,\x00'
+            b'\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;')
+        files = {'image': SimpleUploadedFile(
+            'image.gif', img.read(), content_type='image/gif'), }
+        response = self.client.post(
+            reverse('spirit:comment:image-upload-ajax'),
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+            data=files)
         res = json.loads(response.content.decode('utf-8'))
         image_url = os.path.join(
-            settings.MEDIA_URL, 'spirit', 'images', str(self.user.pk),  "bf21c3043d749d5598366c26e7e4ab44.gif"
+            settings.MEDIA_URL, 'spirit', 'images', str(self.user.pk),
+            "bf21c3043d749d5598366c26e7e4ab44.gif"
         ).replace("\\", "/")
         self.assertEqual(res['url'], image_url)
         image_path = os.path.join(
-            settings.MEDIA_ROOT, 'spirit', 'images', str(self.user.pk), "bf21c3043d749d5598366c26e7e4ab44.gif"
+            settings.MEDIA_ROOT, 'spirit', 'images', str(self.user.pk),
+            "bf21c3043d749d5598366c26e7e4ab44.gif"
         )
         self.assertTrue(os.path.isfile(image_path))
         shutil.rmtree(settings.MEDIA_ROOT)  # cleanup
+
+    @override_settings(MEDIA_ROOT=os.path.join(settings.BASE_DIR, 'media_test'))
+    def test_comment_image_upload_unique(self):
+        user_images_parts = ('spirit', 'images', str(self.user.pk))
+        user_images_base = os.path.join(*user_images_parts)
+        user_media = os.path.join(settings.MEDIA_ROOT, user_images_base)
+        self.assertFalse(os.path.isdir(user_media))
+
+        utils.login(self)
+        img = BytesIO(
+            b'GIF87a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00ccc,\x00'
+            b'\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;')
+        image_name = 'foo_image.gif'
+        file = SimpleUploadedFile(
+            image_name, img.read(), content_type='image/gif')
+        response = self.client.post(
+            reverse('spirit:comment:image-upload-ajax'),
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+            data={'image': file})
+        res = json.loads(response.content.decode('utf-8'))
+
+        self.assertTrue(os.path.isdir(user_media))
+
+        url_parts = res['url'].split('/')
+        self.assertEqual(
+            url_parts[:-2],
+            (settings.MEDIA_URL + '/'.join(user_images_parts)).split('/'))
+        self.assertEqual(len(url_parts[-2]), 32)  # uuid
+        self.assertEqual(url_parts[-1], image_name)
+
+        self.assertEqual(len(os.listdir(user_media)), 1)
+        self.assertTrue(os.path.join(
+            user_media, os.listdir(user_media)[0], image_name))
+        shutil.rmtree(settings.MEDIA_ROOT)  # cleanup
+
+    @override_settings(MEDIA_ROOT=os.path.join(settings.BASE_DIR, 'media_test'))
+    def test_comment_image_upload_unique_no_duplication(self):
+        utils.login(self)
+        img = BytesIO(
+            b'GIF87a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00ccc,\x00'
+            b'\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;')
+        image_name = 'foo_image.gif'
+        file = SimpleUploadedFile(
+            image_name, img.read(), content_type='image/gif')
+
+        response = self.client.post(
+            reverse('spirit:comment:image-upload-ajax'),
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+            data={'image': file})
+        res = json.loads(response.content.decode('utf-8'))
+        first_url = res['url']
+
+        utils.cache_clear()
+        file.seek(0)
+        response = self.client.post(
+            reverse('spirit:comment:image-upload-ajax'),
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+            data={'image': file})
+        res = json.loads(response.content.decode('utf-8'))
+        second_url = res['url']
+
+        self.assertNotEqual(first_url, second_url)
+
+    @override_settings(MEDIA_ROOT=os.path.join(settings.BASE_DIR, 'media_test'))
+    def test_comment_image_upload_mixed_case_ext(self):
+        utils.login(self)
+        img = BytesIO(
+            b'GIF87a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00ccc,\x00'
+            b'\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;')
+        image_name = 'foo_image.GiF'
+        file = SimpleUploadedFile(
+            image_name, img.read(), content_type='image/gif')
+        response = self.client.post(
+            reverse('spirit:comment:image-upload-ajax'),
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+            data={'image': file})
+        res = json.loads(response.content.decode('utf-8'))
+        self.assertTrue(res['url'].endswith('/foo_image.gif'))
+
+    @override_settings(MEDIA_ROOT=os.path.join(settings.BASE_DIR, 'media_test'))
+    def test_comment_image_upload_unique_no_name(self):
+        utils.login(self)
+        img = BytesIO(
+            b'GIF87a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00ccc,\x00'
+            b'\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;')
+        image_name = '.gif'
+        file = SimpleUploadedFile(
+            image_name, img.read(), content_type='image/gif')
+        response = self.client.post(
+            reverse('spirit:comment:image-upload-ajax'),
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+            data={'image': file})
+        res = json.loads(response.content.decode('utf-8'))
+        self.assertIn(
+            'File extension \'\' is not allowed',
+            res['error']['image'][0])
+
+    @override_settings(MEDIA_ROOT=os.path.join(settings.BASE_DIR, 'media_test'))
+    def test_comment_image_upload_unique_bad_name(self):
+        utils.login(self)
+        img = BytesIO(
+            b'GIF87a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00ccc,\x00'
+            b'\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;')
+        ext = '.gif'
+        image_name = '???' + ext
+        file = SimpleUploadedFile(
+            image_name, img.read(), content_type='image/gif')
+        response = self.client.post(
+            reverse('spirit:comment:image-upload-ajax'),
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+            data={'image': file})
+        res = json.loads(response.content.decode('utf-8'))
+        self.assertTrue(res['url'].endswith(ext))
+        self.assertTrue(len(os.path.basename(res['url'])), len(ext) + 32)  # uuid name
+
+    @override_settings(MEDIA_ROOT=os.path.join(settings.BASE_DIR, 'media_test'))
+    def test_comment_image_upload_unique_dots_name(self):
+        utils.login(self)
+        img = BytesIO(
+            b'GIF87a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00ccc,\x00'
+            b'\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;')
+        ext = '.gif'
+        image_name = '?...?...?' + ext
+        file = SimpleUploadedFile(
+            image_name, img.read(), content_type='image/gif')
+        response = self.client.post(
+            reverse('spirit:comment:image-upload-ajax'),
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+            data={'image': file})
+        res = json.loads(response.content.decode('utf-8'))
+        self.assertTrue(res['url'].endswith(ext))
+        self.assertTrue(len(os.path.basename(res['url'])), len(ext) + 32)  # uuid name
+
+    @override_settings(MEDIA_ROOT=os.path.join(settings.BASE_DIR, 'media_test'))
+    def test_comment_image_upload_unique_hidden_name(self):
+        utils.login(self)
+        img = BytesIO(
+            b'GIF87a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00ccc,\x00'
+            b'\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;')
+        ext = '.gif'
+        image_name = '?.h?i?d?d?e?n' + ext
+        file = SimpleUploadedFile(
+            image_name, img.read(), content_type='image/gif')
+        response = self.client.post(
+            reverse('spirit:comment:image-upload-ajax'),
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+            data={'image': file})
+        res = json.loads(response.content.decode('utf-8'))
+        self.assertTrue(res['url'].endswith('/hidden.gif'))
 
     def test_comment_image_upload_invalid(self):
         """
@@ -463,7 +631,8 @@ class CommentViewTest(TestCase):
 
     @override_settings(
         MEDIA_ROOT=os.path.join(settings.BASE_DIR, 'media_test'),
-        FILE_UPLOAD_MAX_MEMORY_SIZE=2621440)
+        FILE_UPLOAD_MAX_MEMORY_SIZE=2621440,
+        ST_PREVENT_SOME_FILE_DUPLICATION=True)
     def test_comment_file_upload(self):
         """
         Check (in-memory) upload files are checked
@@ -484,11 +653,11 @@ class CommentViewTest(TestCase):
 
         res = json.loads(response.content.decode('utf-8'))
         file_url = os.path.join(
-            settings.MEDIA_URL, 'spirit', 'files', str(self.user.pk),  "file_fadcb2389bb2b69b46bc54185de0ae91.pdf"
+            settings.MEDIA_URL, 'spirit', 'files', str(self.user.pk),  "fadcb2389bb2b69b46bc54185de0ae91.pdf"
         ).replace("\\", "/")
         self.assertEqual(res['url'], file_url)
         file_path = os.path.join(
-            settings.MEDIA_ROOT, 'spirit', 'files', str(self.user.pk), "file_fadcb2389bb2b69b46bc54185de0ae91.pdf"
+            settings.MEDIA_ROOT, 'spirit', 'files', str(self.user.pk), "fadcb2389bb2b69b46bc54185de0ae91.pdf"
         )
 
         with open(file_path, 'rb') as fh:
@@ -499,7 +668,8 @@ class CommentViewTest(TestCase):
 
     @override_settings(
         MEDIA_ROOT=os.path.join(settings.BASE_DIR, 'media_test'),
-        FILE_UPLOAD_MAX_MEMORY_SIZE=1)
+        FILE_UPLOAD_MAX_MEMORY_SIZE=1,
+        ST_PREVENT_SOME_FILE_DUPLICATION=True)
     def test_comment_file_upload_tmp_file(self):
         """
         Check (tmp) upload files are checked
@@ -520,11 +690,11 @@ class CommentViewTest(TestCase):
 
         res = json.loads(response.content.decode('utf-8'))
         file_url = os.path.join(
-            settings.MEDIA_URL, 'spirit', 'files', str(self.user.pk), "file_large_fadcb2389bb2b69b46bc54185de0ae91.pdf"
+            settings.MEDIA_URL, 'spirit', 'files', str(self.user.pk), "fadcb2389bb2b69b46bc54185de0ae91.pdf"
         ).replace("\\", "/")
         self.assertEqual(res['url'], file_url)
         file_path = os.path.join(
-            settings.MEDIA_ROOT, 'spirit', 'files', str(self.user.pk), "file_large_fadcb2389bb2b69b46bc54185de0ae91.pdf"
+            settings.MEDIA_ROOT, 'spirit', 'files', str(self.user.pk), "fadcb2389bb2b69b46bc54185de0ae91.pdf"
         )
 
         with open(file_path, 'rb') as fh:
@@ -532,6 +702,72 @@ class CommentViewTest(TestCase):
             self.assertEqual(fh.read(), file.read())
 
         shutil.rmtree(settings.MEDIA_ROOT)  # cleanup
+
+    @override_settings(MEDIA_ROOT=os.path.join(settings.BASE_DIR, 'media_test'))
+    def test_comment_file_upload_unique(self):
+        user_files_parts = ('spirit', 'files', str(self.user.pk))
+        user_files_base = os.path.join(*user_files_parts)
+        user_media = os.path.join(settings.MEDIA_ROOT, user_files_base)
+        self.assertFalse(os.path.isdir(user_media))
+
+        utils.login(self)
+        pdf = BytesIO(
+            b'%PDF-1.0\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1'
+            b'>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 3 3]>>endobj\nxref\n0 4\n0000000000 65535 f\n000000'
+            b'0010 00000 n\n0000000053 00000 n\n0000000102 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxre'
+            b'f\n149\n%EOF\n')
+        file_name = 'foo.pdf'
+        file = SimpleUploadedFile(
+            file_name, pdf.read(), content_type='application/pdf')
+        response = self.client.post(
+            reverse('spirit:comment:file-upload-ajax'),
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+            data={'file': file})
+        res = json.loads(response.content.decode('utf-8'))
+
+        self.assertTrue(os.path.isdir(user_media))
+
+        url_parts = res['url'].split('/')
+        self.assertEqual(
+            url_parts[:-2],
+            (settings.MEDIA_URL + '/'.join(user_files_parts)).split('/'))
+        self.assertEqual(len(url_parts[-2]), 32)  # uuid
+        self.assertEqual(url_parts[-1], file_name)
+
+        self.assertEqual(len(os.listdir(user_media)), 1)
+        self.assertTrue(os.path.join(
+            user_media, os.listdir(user_media)[0], file_name))
+        shutil.rmtree(settings.MEDIA_ROOT)  # cleanup
+
+    @override_settings(MEDIA_ROOT=os.path.join(settings.BASE_DIR, 'media_test'))
+    def test_comment_file_upload_unique_no_duplication(self):
+        utils.login(self)
+        pdf = BytesIO(
+            b'%PDF-1.0\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1'
+            b'>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 3 3]>>endobj\nxref\n0 4\n0000000000 65535 f\n000000'
+            b'0010 00000 n\n0000000053 00000 n\n0000000102 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxre'
+            b'f\n149\n%EOF\n')
+        file_name = 'foo.pdf'
+        file = SimpleUploadedFile(
+            file_name, pdf.read(), content_type='application/pdf')
+
+        response = self.client.post(
+            reverse('spirit:comment:file-upload-ajax'),
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+            data={'file': file})
+        res = json.loads(response.content.decode('utf-8'))
+        first_url = res['url']
+
+        utils.cache_clear()
+        file.seek(0)
+        response = self.client.post(
+            reverse('spirit:comment:file-upload-ajax'),
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+            data={'file': file})
+        res = json.loads(response.content.decode('utf-8'))
+        second_url = res['url']
+
+        self.assertNotEqual(first_url, second_url)
 
     def test_comment_file_upload_invalid_ext(self):
         """
@@ -643,11 +879,14 @@ class CommentTemplateTagTests(TestCase):
         """
         should display simple comment form
         """
+        req = RequestFactory().get('/')
+        req.user = self.user
+        req_context = Context({'topic': self.topic, 'request': req})
         Template(
             "{% load spirit_tags %}"
             "{% render_comments_form topic %}"
-        ).render(Context({'topic': self.topic, }))
-        context = render_comments_form(self.topic)
+        ).render(req_context)
+        context = render_comments_form(req_context, self.topic)
         self.assertEqual(context['next'], None)
         self.assertIsInstance(context['form'], CommentForm)
         self.assertEqual(context['topic_id'], self.topic.pk)
@@ -734,12 +973,14 @@ class CommentFormTest(TestCase):
         self.assertEqual(form.is_valid(), True)
         self.assertEqual(form.save(), list(Comment.objects.filter(topic=to_topic)))
 
+    @override_settings(ST_PREVENT_SOME_FILE_DUPLICATION=True)
     def test_comment_image_upload(self):
         """
         Image upload
         """
-        content = b'GIF87a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00ccc,\x00' \
-                  b'\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;'
+        content = (
+            b'GIF87a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00ccc,\x00'
+            b'\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;')
         img = BytesIO(content)
         files = {'image': SimpleUploadedFile('image.gif', img.read(), content_type='image/gif'), }
 
@@ -757,6 +998,17 @@ class CommentFormTest(TestCase):
             self.assertEqual(fh.read(), content)
 
         os.remove(image_path)
+
+    def test_comment_image_upload_ext_ci(self):
+        """Should allow images with mixed case extension"""
+        content = (
+            b'GIF87a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00ccc,\x00'
+            b'\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;')
+        files = {
+            'image': SimpleUploadedFile(
+                'image.GiF', content, content_type='image/gif')}
+        form = CommentImageForm(user=self.user, data={}, files=files)
+        self.assertTrue(form.is_valid())
 
     def test_comment_image_upload_no_extension(self):
         """

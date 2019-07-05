@@ -19,10 +19,6 @@ from .forms import CommentForm, CommentMoveForm, CommentImageForm, CommentFileFo
 from .utils import comment_posted, post_comment_update, pre_comment_update, post_comment_move
 
 
-def get_next_url(request, default=None):
-    return request.POST.get('next') or request.GET.get('next') or default
-
-
 @login_required
 @ratelimit(rate='1/10s')
 def publish(request, topic_id, pk=None):
@@ -38,19 +34,20 @@ def publish(request, topic_id, pk=None):
             if not user.st.update_post_hash(form.get_comment_hash()):
                 # Hashed comment may have not been saved yet
                 return redirect(
-                    get_next_url(request) or
-                    Comment.get_last_for_topic(topic_id)
-                           .get_absolute_url())
+                    request.POST.get('next', None) or
+                    Comment
+                    .get_last_for_topic(topic_id)
+                    .get_absolute_url())
 
             comment = form.save()
             comment_posted(comment=comment, mentions=form.mentions)
-            return redirect(get_next_url(request, comment.get_absolute_url()))
+            return redirect(request.POST.get('next', comment.get_absolute_url()))
     else:
         initial = None
 
         if pk:  # todo: move to form
             comment = get_object_or_404(Comment.objects.for_access(user=user), pk=pk)
-            quote = markdown.quotify(comment.comment, comment.user.username)
+            quote = markdown.quotify(comment.comment, comment.user.st.nickname)
             initial = {'comment': quote}
 
         form = CommentForm(initial=initial)
@@ -74,13 +71,11 @@ def update(request, pk):
             pre_comment_update(comment=Comment.objects.get(pk=comment.pk))
             comment = form.save()
             post_comment_update(comment=comment)
-            return redirect(get_next_url(request, comment.get_absolute_url()))
+            return redirect(request.POST.get('next', comment.get_absolute_url()))
     else:
         form = CommentForm(instance=comment)
 
-    context = {
-        'form': form,
-    }
+    context = {'form': form}
 
     return render(request, 'spirit/comment/update.html', context)
 
@@ -90,13 +85,13 @@ def delete(request, pk, remove=True):
     comment = get_object_or_404(Comment, pk=pk)
 
     if request.method == 'POST':
-        Comment.objects\
-            .filter(pk=pk)\
-            .update(is_removed=remove)
+        (Comment.objects
+         .filter(pk=pk)
+         .update(is_removed=remove))
 
-        return redirect(get_next_url(request, comment.get_absolute_url()))
+        return redirect(request.GET.get('next', comment.get_absolute_url()))
 
-    context = {'comment': comment, }
+    context = {'comment': comment}
 
     return render(request, 'spirit/comment/moderate.html', context)
 
@@ -117,16 +112,17 @@ def move(request, topic_id):
     else:
         messages.error(request, render_form_errors(form))
 
-    return redirect(get_next_url(request, topic.get_absolute_url()))
+    return redirect(request.POST.get('next', topic.get_absolute_url()))
 
 
 def find(request, pk):
     comment = get_object_or_404(Comment.objects.select_related('topic'), pk=pk)
     comment_number = Comment.objects.filter(topic=comment.topic, date__lte=comment.date).count()
-    url = paginator.get_url(comment.topic.get_absolute_url(),
-                            comment_number,
-                            config.comments_per_page,
-                            'page')
+    url = paginator.get_url(
+        comment.topic.get_absolute_url(),
+        comment_number,
+        config.comments_per_page,
+        'page')
     return redirect(url)
 
 
@@ -140,7 +136,7 @@ def image_upload_ajax(request):
 
     if form.is_valid():
         image = form.save()
-        return json_response({'url': image.url, })
+        return json_response({'url': image.url})
 
     return json_response({'error': dict(form.errors.items()), })
 
@@ -155,6 +151,6 @@ def file_upload_ajax(request):
 
     if form.is_valid():
         file = form.save()
-        return json_response({'url': file.url, })
+        return json_response({'url': file.url})
 
-    return json_response({'error': dict(form.errors.items()), })
+    return json_response({'error': dict(form.errors.items())})

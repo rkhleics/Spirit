@@ -34,6 +34,7 @@ class Category(models.Model):
     color = models.CharField(
         _("color"), max_length=7, blank=True,
         help_text=_("Title color in hex format (i.e: #1aafd0)."))
+    sort = models.PositiveIntegerField(_("sorting order"), default=0)
     reindex_at = models.DateTimeField(_("modified at"), default=timezone.now)
 
     is_global = models.BooleanField(
@@ -48,7 +49,10 @@ class Category(models.Model):
     objects = CategoryQuerySet.as_manager()
 
     class Meta:
-        ordering = ['title', 'pk']
+        if settings.ST_ORDERED_CATEGORIES:
+            ordering = ['sort', 'pk']
+        else:
+            ordering = ['title', 'pk']
         verbose_name = _("category")
         verbose_name_plural = _("categories")
 
